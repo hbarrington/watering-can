@@ -14,8 +14,16 @@ dependencies:
     source:
       type: idf
     version: 5.5.0
+  protocol_examples_common:
+    dependencies: []
+    source:
+      path: 
+        /home/hunter/watering-can/vendor/esp-idf-v5.5/examples/common_components/protocol_examples_common
+      type: local
+    version: '*'
 direct_dependencies:
 - espressif/led_strip
-manifest_hash: cdcc77aff1f56b906c61e51c8f438577513c8d92aa9dfd7bf655f126d2b2d320
+- protocol_examples_common
+manifest_hash: cd071d2a5263ef5e5047dd3822b9fb4058943ec0d83c9ce564e4341d67f9a07e
 target: esp32
 version: 2.0.0

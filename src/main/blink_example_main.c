@@ -12,14 +12,21 @@
 #include "driver/gpio.h"
 #include "esp_log.h"
 #include "led_strip.h"
+#include <time.h>
 #include "sdkconfig.h"
+// #include "WiFi.h"
+#include "protocol_examples_common.h"
+#include "esp_netif_sntp.h"
+#include "esp_sntp.h"
+// #include "lwip/apps/sntp.h"
+
 
 static const char *TAG = "watering-can";
 
 /* Use project configuration menu (idf.py menuconfig) to choose the GPIO to blink,
    or you can edit the following line and set a number here.
 */
-#define BLINK_GPIO 26
+#define BLINK_GPIO 18
 
 static uint8_t s_led_state = 0;
 
@@ -89,11 +96,25 @@ static void configure_led(void)
 #error "unsupported LED type"
 #endif
 
+
+void time_sync_notification_cb(struct timeval *tv)
+{
+    ESP_LOGI(TAG, "Notification of a time synchronization event");
+}
+
 void app_main(void)
 {
 
     /* Configure the peripheral according to the LED type */
     configure_led();
+
+    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    config.sync_cb = time_sync_notification_cb; // only if we need the notification function
+    esp_netif_sntp_init(&config);
+
+    ESP_ERROR_CHECK(example_connect());
+
+    esp_netif_sntp_start();
 
     while (1) {
         ESP_LOGI(TAG, "Hello World: Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
@@ -101,5 +122,19 @@ void app_main(void)
         /* Toggle the LED state */
         s_led_state = !s_led_state;
         vTaskDelay(CONFIG_BLINK_PERIOD / portTICK_PERIOD_MS);
+
+        time_t now;
+        char strftime_buf[64];
+        struct tm timeinfo;
+
+        time(&now);
+        // Set timezone to China Standard Time
+        setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
+        tzset();
+
+        localtime_r(&now, &timeinfo);
+        strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
+        ESP_LOGI(TAG, "The current date/time in New York is: %s", strftime_buf);
+
     }
 }
