@@ -11,10 +11,12 @@
 #include "freertos/task.h"
 #include "driver/gpio.h"
 #include "esp_log.h"
+#include "esp_event.h"
 #include "led_strip.h"
 #include <time.h>
 #include "sdkconfig.h"
 // #include "WiFi.h"
+#include "nvs_flash.h"
 #include "protocol_examples_common.h"
 #include "esp_netif_sntp.h"
 #include "esp_sntp.h"
@@ -108,11 +110,17 @@ void app_main(void)
     /* Configure the peripheral according to the LED type */
     configure_led();
 
+
+    ESP_ERROR_CHECK( nvs_flash_init() );
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK( esp_event_loop_create_default() );
+
+    ESP_ERROR_CHECK(example_connect());
+
     esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
     config.sync_cb = time_sync_notification_cb; // only if we need the notification function
     esp_netif_sntp_init(&config);
 
-    ESP_ERROR_CHECK(example_connect());
 
     esp_netif_sntp_start();
 
