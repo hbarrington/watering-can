@@ -14,15 +14,16 @@
 # Override any of these via environment variables if your setup differs:
 #   REMOTE_HOST   (default: hunter@watering-can)
 #   REMOTE_PATH   (default: ~/watering-can)
-#   IDF_EXPORT    (default: ~/esp/esp-idf/export.sh -- wherever ESP-IDF v5.5
-#                  actually lives on the Pi; edit this if that's wrong)
+#   IDF_EXPORT    (default: $REMOTE_PATH/vendor/esp-idf-v5.5/export.sh --
+#                  ESP-IDF lives inside the synced repo on the Pi, so this
+#                  tracks REMOTE_PATH unless you override it directly)
 #   PORT          (default: /dev/ttyUSB0)
 
 set -euo pipefail
 
 REMOTE_HOST="${REMOTE_HOST:-hunter@watering-can}"
 REMOTE_PATH="${REMOTE_PATH:-~/watering-can}"
-IDF_EXPORT="${IDF_EXPORT:-~/esp/esp-idf/export.sh}"
+IDF_EXPORT="${IDF_EXPORT:-$REMOTE_PATH/vendor/esp-idf-v5.5/export.sh}"
 PORT="${PORT:-/dev/ttyUSB0}"
 
 DO_MONITOR=0
