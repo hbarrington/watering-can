@@ -1,0 +1,75 @@
+menu "Watering Can Configuration"
+
+    config WC_TIMEZONE
+        string "POSIX TZ string"
+        default "EST5EDT,M3.2.0/2,M11.1.0"
+        help
+            Passed to setenv("TZ", ...) so the schedule below is evaluated in
+            local time rather than UTC.
+
+    menu "Grow Light Relays"
+
+        config WC_NUM_LIGHT_RELAYS
+            int "Number of grow light relays in use"
+            range 1 4
+            default 2
+            help
+                How many of the 4 configured relay GPIOs below are actually
+                wired up and should be driven. Lets us start with 2 relays
+                and grow to 4 without code changes.
+
+        config WC_RELAY_ACTIVE_LOW
+            bool "Relays are active-low"
+            default y
+            help
+                Confirmed on the LAFVIN dual-relay module: driving the pin
+                LOW energizes the relay (COM -> NO). Driving it HIGH (or
+                leaving it floating at boot) de-energizes it. See
+                samples/relay-demo's README "Learnings" section.
+
+        config WC_LIGHT_RELAY1_GPIO
+            int "Relay 1 GPIO"
+            default 25
+            help
+                Confirmed via voltmeter to match the board's "D25" silkscreen
+                label directly (no off-by-one on this board).
+
+        config WC_LIGHT_RELAY2_GPIO
+            int "Relay 2 GPIO"
+            default 26
+
+        config WC_LIGHT_RELAY3_GPIO
+            int "Relay 3 GPIO"
+            default 27
+            help
+                Only used when "Number of grow light relays in use" is 3 or 4.
+
+        config WC_LIGHT_RELAY4_GPIO
+            int "Relay 4 GPIO"
+            default 33
+            help
+                Only used when "Number of grow light relays in use" is 4.
+
+        config WC_LIGHT_ON_HOUR
+            int "Lights ON hour (0-23, local time)"
+            range 0 23
+            default 6
+
+        config WC_LIGHT_ON_MINUTE
+            int "Lights ON minute"
+            range 0 59
+            default 0
+
+        config WC_LIGHT_OFF_HOUR
+            int "Lights OFF hour (0-23, local time)"
+            range 0 23
+            default 22
+
+        config WC_LIGHT_OFF_MINUTE
+            int "Lights OFF minute"
+            range 0 59
+            default 0
+
+    endmenu
+
+endmenu

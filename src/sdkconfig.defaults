@@ -1,0 +1,10 @@
+# Seed config for a fresh `idf.py set-target esp32` / `idf.py build`.
+# The real, generated sdkconfig is gitignored on purpose (see ../.gitignore) so
+# WiFi credentials set via `idf.py menuconfig` never end up in git history the
+# way they did on the old demo project. Set your real SSID/password locally
+# with menuconfig before flashing.
+CONFIG_IDF_TARGET="esp32"
+
+CONFIG_EXAMPLE_CONNECT_WIFI=y
+CONFIG_EXAMPLE_WIFI_SSID="CHANGEME"
+CONFIG_EXAMPLE_WIFI_PASSWORD="CHANGEME"
