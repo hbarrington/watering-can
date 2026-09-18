@@ -2,8 +2,11 @@
     "idf.pythonInstallPath": "/usr/bin/python",
     "files.exclude": {
         // "vendor/*": true 
-    }
+    },
     "search.exclude": {
         "vendor/*": true 
-    }
+    },
+    "terminal.integrated.suggest.enabled": false, 
+    "terminal.integrated.suggest.quickSuggestions": false,
+    "terminal.integrated.suggest.inlineSuggestion": false
 }

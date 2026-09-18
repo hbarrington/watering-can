@@ -28,8 +28,10 @@ static const char *TAG = "watering-can";
 /* Use project configuration menu (idf.py menuconfig) to choose the GPIO to blink,
    or you can edit the following line and set a number here.
 */
-#define BLINK_GPIO 18
+// Confirmed via voltmeter: silkscreen "D25" is GPIO25 directly (no off-by-one on this board)
+#define BLINK_GPIO 25
 
+// GPIO level to drive; the relay is active-LOW, so 0 = energized (COM->NO), 1 = de-energized (COM rests on NC)
 static uint8_t s_led_state = 0;
 
 #ifdef CONFIG_BLINK_LED_STRIP
@@ -81,7 +83,9 @@ static void configure_led(void)
 
 static void blink_led(void)
 {
-    /* Set the GPIO level according to the state (LOW or HIGH)*/
+    /* Relay is active-LOW: driving this pin LOW energizes it (COM -> NO),
+       driving it HIGH de-energizes it (COM rests on NC). */
+    ESP_LOGI(TAG, "Setting relay %s (GPIO %s)", s_led_state ? "de-energized" : "energized", s_led_state ? "HIGH" : "LOW");
     gpio_set_level(BLINK_GPIO, s_led_state);
 }
 
@@ -125,24 +129,35 @@ void app_main(void)
     esp_netif_sntp_start();
 
     while (1) {
-        ESP_LOGI(TAG, "Hello World: Turning the LED %s!", s_led_state == true ? "ON" : "OFF");
+        ESP_LOGI(TAG, "Hello World: relay is %s!", s_led_state == true ? "de-energized" : "energized");
         blink_led();
         /* Toggle the LED state */
         s_led_state = !s_led_state;
         vTaskDelay(CONFIG_BLINK_PERIOD / portTICK_PERIOD_MS);
 
         time_t now;
+        // time_t scheduled_time;
         char strftime_buf[64];
         struct tm timeinfo;
+        double time_until_scheduled;
 
         time(&now);
-        // Set timezone to China Standard Time
+        // Set timezone to EST
         setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
         tzset();
 
         localtime_r(&now, &timeinfo);
         strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
         ESP_LOGI(TAG, "The current date/time in New York is: %s", strftime_buf);
+
+        blink_led();
+
+        
+        // time_until_scheduled = difftime(scheduled_time, now);
+        // if (time_until_scheduled <= 0 && s_led_state == false) {
+            // ESP_LOGI(TAG, "The current time is in the scheduled period");
+            // blink_led();
+        // }
 
     }
 }
