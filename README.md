@@ -56,15 +56,14 @@ flowchart TB
 Building this iteratively since only a couple of dev boards are wired up at a time — each phase gets flashed and tested on real hardware before moving to the next.
 
 1. **Grow light scheduling** — `src/` has a first pass: 2 relays (configurable up to 4) driving 120V grow-light outlets on a daily on/off schedule (Kconfig-configurable hours/minutes), reusing the WiFi+SNTP time sync proven in the demo. **Status: validated on hardware.**
-2. **Tree sensor monitoring** — temperature, moisture, and acidity per calamansi tree, for up to 4 trees (configurable). Sensor hardware now picked (see Hardware below); drivers not yet written.
+2. **Tree sensor monitoring** — temperature, moisture, and acidity per calamansi tree, for up to 4 trees (configurable). Sensor hardware now picked (see Hardware below). `pot/`'s toolchain/flash/boot and Ethernet+PoE connectivity (DHCP-assigned IP over the RJ45/PoE port) are both **validated on hardware**; sensor drivers not yet written.
 3. **Automatic watering** — trigger a water pump relay when a tree's moisture reading is low.
 4. **Root warming** — trigger a relay for a 120V warming blanket when a tree's root-zone temperature is cold.
 5. **Remote schedule management** — a small web service (ESPAsyncWebServer is vendored as a candidate) to configure schedules/thresholds without a reflash.
 
 ## TODOs
 * fully isolate ESP32 from relay/mains side (see [Learnings](#learnings))
-* verify the Unit PoE-P4's RMII/Hat2-Bus pin mapping in `hardware_bom.md` against the schematic (sourced from M5Stack's docs page, not confirmed on hardware yet) before wiring Ethernet or sensors
-* bring up Ethernet (DHCP + link-up logging) on `pot/` — boot/flash confirmed on hardware (Oct 2026), this is the next step — see Roadmap
+* verify the Unit PoE-P4's Hat2-Bus pin mapping in `hardware_bom.md` against the schematic before wiring sensors to it — the RMII/Ethernet pins are now confirmed working on hardware, but Hat2-Bus is still just sourced from M5Stack's docs page
 * validate one Unit PoE-P4 node end-to-end at the sensors stage before wiring up the other 3
 * pilot the recommended soil pH sensor on one tree before buying 4 more at ~$99 each (see `hardware_bom.md`)
 * add a voltage divider for the pH sensor's 0–4V output before wiring to the ESP32 ADC (max 3.3V input)
@@ -86,6 +85,8 @@ Building this iteratively since only a couple of dev boards are wired up at a ti
 * The Unit PoE-P4 (ESP32-P4) has no USB-UART bridge chip — its OTG/firmware-download USB-C port uses the chip's native USB-Serial/JTAG, which Linux exposes as `/dev/ttyACM0`, not `/dev/ttyUSBx` like the CP2102/CH340-based ESP32 boards. `scripts/deploy.sh --pot` defaults to `ttyACM0` for this reason.
 * If a board powers on (status LED lit) but nothing shows up under `ls /dev/ttyUSB* /dev/ttyACM*` at all, suspect a charge-only USB-C cable before anything else — some cables (especially ones bundled for power banks) carry power but no data lines. This was the actual cause the first time the pot module "wasn't detected."
 * `pot/`'s esp32p4 build defaults to assuming 2MB flash unless `CONFIG_ESPTOOLPY_FLASHSIZE_16MB` is set, even though the board has 16MB — harmless for a small binary but worth setting correctly up front (now in `pot/sdkconfig.defaults`).
+* Ethernet on `pot/` worked first try using the esp32p4 EMAC pin defaults ESP-IDF itself ships (`ETH_ESP32_EMAC_DEFAULT_CONFIG()`) plus the generic example's default PHY address (1) — link up, DHCP-assigned IP, all confirmed on hardware. Nice case of two independent sources (M5Stack's docs + ESP-IDF's own defaults) agreeing before ever touching real hardware.
+* `idf.py set-target <target>` always runs a `fullclean` first (wiping `sdkconfig` and the whole build cache), even if the target isn't actually changing. `scripts/deploy.sh` now checks the existing `sdkconfig` and only calls `set-target` when the target actually differs — otherwise every single deploy was silently forcing a full rebuild, `--flash-only` included.
 
 ## Hardware
 Full itemized parts list with quantities, costs, and purchase links lives in [`hardware_bom.md`](hardware_bom.md), kept up to date as decisions get made. Summary:

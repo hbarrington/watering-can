@@ -38,12 +38,20 @@ Quantities assume the full build-out described in the System Diagram: 1 main mod
 ## Unit PoE-P4 pin mapping (for wiring sensors/relays)
 
 Pulled from [M5Stack's docs page](https://docs.m5stack.com/en/unit/Unit_PoE-P4) (the GPIO
-table below), cross-checked only on the USB-C port assignment so far via a
-second source ([CNX Software](https://www.cnx-software.com/2026/02/27/m5stack-unit-poe-p4-a-tiny-poe-powered-esp32-p4-development-kit-with-mipi-dsi-csi-and-usb-c-connectors/)).
-**Treat the GPIO numbers as a first pass, not confirmed-correct** — verify
-against the schematic (or empirically via link-up) before relying on them.
-The Ethernet pins are already "used" (wired to the onboard PHY) — don't reuse
-them for sensors.
+table below), cross-checked on the USB-C port assignment via a second source
+([CNX Software](https://www.cnx-software.com/2026/02/27/m5stack-unit-poe-p4-a-tiny-poe-powered-esp32-p4-development-kit-with-mipi-dsi-csi-and-usb-c-connectors/)).
+
+**Update (confirmed on hardware):** the Ethernet pins (MDC/MDIO/PHY-reset/RMII
+data+clock) and the PHY address are all now validated end-to-end on a real
+Unit PoE-P4 — `pot/` gets link-up and a DHCP-assigned IP over the RJ45/PoE
+port on the first try. These pins were also independently corroborated
+ahead of time by ESP-IDF's own `ETH_ESP32_EMAC_DEFAULT_CONFIG()` for
+`esp32p4` (`components/esp_eth/include/esp_eth_mac_esp.h`) and the matching
+Kconfig defaults in `protocol_examples_common`, which hardcode the same pin
+numbers — worth noting since that cross-check caught no surprises once it
+hit real hardware. The Hat2-Bus/Grove pins below remain sourced from
+M5Stack's docs only, not yet confirmed — still worth verifying before
+wiring sensors to them.
 
 Ethernet (RMII, wired to the onboard IP101GRI PHY — not available for other use):
 

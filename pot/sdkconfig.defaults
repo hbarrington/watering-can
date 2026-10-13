@@ -17,3 +17,25 @@ CONFIG_ESP32P4_REV_MIN_300=y
 # once Ethernet/sensors/OTA grow the binary.
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+
+# Ethernet bring-up (Phase 2): internal EMAC + IP101 PHY over the Unit
+# PoE-P4's RJ45/PoE port, via the same protocol_examples_common helper
+# src/ uses for WiFi (example_connect() dispatches to Ethernet when this
+# is selected instead of CONFIG_EXAMPLE_CONNECT_WIFI).
+CONFIG_EXAMPLE_CONNECT_WIFI is not set
+CONFIG_EXAMPLE_CONNECT_ETHERNET=y
+CONFIG_EXAMPLE_USE_INTERNAL_ETHERNET=y
+CONFIG_EXAMPLE_ETH_PHY_IP101=y
+
+# MDC/MDIO/PHY-reset: these match the esp32p4 defaults already built into
+# ESP-IDF (ETH_ESP32_EMAC_DEFAULT_CONFIG() in esp_eth_mac_esp.h) *and*
+# M5Stack's docs pin table in hardware_bom.md -- set explicitly here so
+# they don't silently drift if upstream Kconfig defaults ever change.
+CONFIG_EXAMPLE_ETH_MDC_GPIO=31
+CONFIG_EXAMPLE_ETH_MDIO_GPIO=52
+CONFIG_EXAMPLE_ETH_PHY_RST_GPIO=51
+
+# NOT independently confirmed for this board -- just the example's
+# generic default. First thing to try if the PHY isn't found/link never
+# comes up.
+CONFIG_EXAMPLE_ETH_PHY_ADDR=1
