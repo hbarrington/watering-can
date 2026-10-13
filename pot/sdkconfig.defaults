@@ -1,0 +1,19 @@
+# M5Stack Unit PoE-P4 (ESP32-P4, RISC-V). This chip needs its own
+# toolchain (riscv32-esp-elf) -- run `install.sh esp32p4` (or `install.sh all`)
+# once on whichever machine builds this project if it's not already there.
+CONFIG_IDF_TARGET="esp32p4"
+
+# Matches M5Stack's own factory-firmware defaults for this board: the
+# Unit PoE-P4 uses silicon rev >= v3.0, which needs this explicitly set.
+# (Source: m5stack/M5Unit-PoE-P4-UserDemo sdkconfig.p4x.defaults)
+# CONFIG_ESP32P4_SELECTS_REV_LESS_V3 is not set
+CONFIG_ESP32P4_REV_MIN_300=y
+
+# Board has 16MB flash (confirmed via hardware_bom.md / M5Stack's specs).
+# Without this, the build defaults to assuming 2MB, which still boots fine
+# for a binary this small but under-reports capacity (seen on first boot:
+# "Detected size(16384k) larger than the size in the binary image header
+# (2048k). Using the size in the binary image header.") and will matter
+# once Ethernet/sensors/OTA grow the binary.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"

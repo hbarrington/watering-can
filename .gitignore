@@ -5,3 +5,7 @@ build/
 # (samples/relay-demo/sdkconfig* predates this and is left tracked as-is.)
 src/sdkconfig
 src/sdkconfig.old
+
+# Same as src/ above, but for the pot/ (Unit PoE-P4) project.
+pot/sdkconfig
+pot/sdkconfig.old

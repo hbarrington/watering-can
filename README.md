@@ -8,7 +8,8 @@ GPIO for
 * `samples/relay-demo/` — the original single-relay blink/wifi/sntp demo, left working as reference (see its own README's "Learnings" section for the relay wiring gotchas discovered there).
 * `samples/gists/` — a reference ESP32 web-relay-control Arduino sketch, kept for ideas toward a future web-managed schedule.
 * `vendor/` — untracked, local-only: full ESP-IDF checkout, Arduino ESP32 core, ESPAsyncWebServer. Used for building/reference, not shipped.
-* `scripts/deploy.sh` — rsyncs the repo to the Pi ("watering-can", USB-attached to the ESP32) and builds/flashes it there; see the script header for usage and overridable env vars (remote host/path, ESP-IDF export.sh location, serial port).
+* `pot/` — ESP-IDF project for the Unit PoE-P4 tree-pot module (target `esp32p4`). Currently a minimal bring-up build (boot + serial log only, confirming the toolchain/flash pipeline) — Ethernet and sensors come next.
+* `scripts/deploy.sh` — rsyncs the repo to the Pi ("watering-can", USB-attached) and builds/flashes a given project there; defaults to `src/` on `esp32`, override with `PROJECT_DIR`/`TARGET` env vars (e.g. `PROJECT_DIR=pot TARGET=esp32p4`) for `pot/`; see the script header for the rest of the overridable env vars (remote host/path, ESP-IDF export.sh location, serial port).
 
 ## System Diagram
 One main module in the ceiling light fixture; one module per tree pot for sensing and local water/heat control. The pot modules are wired Ethernet + PoE (M5Stack Unit PoE-P4 — 3 owned, 1 more to buy) rather than WiFi, since the garage they'll run in already has a switch and dedicated Ethernet runs.
@@ -62,9 +63,9 @@ Building this iteratively since only a couple of dev boards are wired up at a ti
 
 ## TODOs
 * fully isolate ESP32 from relay/mains side (see [Learnings](#learnings))
-* look up the Unit PoE-P4's exact GPIO/ADC pinout (Hat2-Bus header) for wiring the sensors + relays — see `hardware_bom.md`
+* verify the Unit PoE-P4's RMII/Hat2-Bus pin mapping in `hardware_bom.md` against the schematic (sourced from M5Stack's docs page, not confirmed on hardware yet) before wiring Ethernet or sensors
+* bring up Ethernet (DHCP + link-up logging) on `pot/` — boot/flash confirmed on hardware (Oct 2026), this is the next step — see Roadmap
 * validate one Unit PoE-P4 node end-to-end at the sensors stage before wiring up the other 3
-* Unit PoE-P4 runs ESP32-P4 (RISC-V, no built-in WiFi/BT, different chip family from the ESP32 in `src/`) — pot-module firmware will need its own `idf.py set-target esp32p4` project; plan to share `relay_controller`/sensor components between the two rather than duplicating
 * pilot the recommended soil pH sensor on one tree before buying 4 more at ~$99 each (see `hardware_bom.md`)
 * add a voltage divider for the pH sensor's 0–4V output before wiring to the ESP32 ADC (max 3.3V input)
 * water pump relay + plumbing
@@ -82,6 +83,9 @@ Building this iteratively since only a couple of dev boards are wired up at a ti
 * The relay module needs 5V on VCC to power the coil driver. Pulling the VCC/JD-VCC jumper to give the coil its own dedicated supply works, but the module only has one shared GND pin (no separate GND for JD-VCC) — that dedicated supply's ground still has to tie into the same ground as the ESP32/Pi/module, or the coil has no return path. Misleading failure mode: the opto-isolator LED still lights even when the coil circuit is broken this way. Keeping the jumper in place is the simplest correct wiring unless true isolation gets implemented (see TODO above).
 * The relay is active-LOW: driving IN LOW energizes it (COM switches NC → NO); HIGH or floating at boot leaves it de-energized. The firmware's "ON"/"OFF" log labels are currently inverted relative to this.
 * DHT11 only measures ambient air temperature/humidity — it doesn't substitute for root-zone soil temperature or soil moisture, both of which need their own per-tree sensors (DS18B20 and a capacitive moisture sensor, respectively).
+* The Unit PoE-P4 (ESP32-P4) has no USB-UART bridge chip — its OTG/firmware-download USB-C port uses the chip's native USB-Serial/JTAG, which Linux exposes as `/dev/ttyACM0`, not `/dev/ttyUSBx` like the CP2102/CH340-based ESP32 boards. `scripts/deploy.sh --pot` defaults to `ttyACM0` for this reason.
+* If a board powers on (status LED lit) but nothing shows up under `ls /dev/ttyUSB* /dev/ttyACM*` at all, suspect a charge-only USB-C cable before anything else — some cables (especially ones bundled for power banks) carry power but no data lines. This was the actual cause the first time the pot module "wasn't detected."
+* `pot/`'s esp32p4 build defaults to assuming 2MB flash unless `CONFIG_ESPTOOLPY_FLASHSIZE_16MB` is set, even though the board has 16MB — harmless for a small binary but worth setting correctly up front (now in `pot/sdkconfig.defaults`).
 
 ## Hardware
 Full itemized parts list with quantities, costs, and purchase links lives in [`hardware_bom.md`](hardware_bom.md), kept up to date as decisions get made. Summary:

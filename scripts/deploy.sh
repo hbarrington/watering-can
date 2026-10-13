@@ -1,30 +1,47 @@
 #!/usr/bin/env bash
-# Sync src/ (and the rest of the repo, minus vendor/build/git cruft) to the
-# Raspberry Pi ("watering-can") that has the ESP32 attached over USB, then
-# build and flash it there.
+# Sync a firmware project (and the rest of the repo, minus vendor/build/git
+# cruft) to the Raspberry Pi ("watering-can") that has the ESP32/ESP32-P4
+# boards attached over USB, then build and flash it there.
 #
 # Run this from your dev machine, not the Pi.
 #
 # Usage:
-#   scripts/deploy.sh                # rsync + build + flash
-#   scripts/deploy.sh --monitor      # ...then attach the serial monitor
-#   scripts/deploy.sh --menuconfig   # ...run menuconfig first (interactive)
+#   scripts/deploy.sh                          # src/ on esp32, build + flash
+#   scripts/deploy.sh --monitor                # ...then attach the serial monitor
+#   scripts/deploy.sh --menuconfig             # ...run menuconfig first (interactive)
 #   scripts/deploy.sh --port /dev/ttyACM0
+#   scripts/deploy.sh --pot --monitor          # pot module (Unit PoE-P4), shorthand for the env vars below
+#   scripts/deploy.sh --src                    # back to the main module (the default, spelled out)
+#   PROJECT_DIR=pot TARGET=esp32p4 scripts/deploy.sh --monitor   # same as --pot, via env vars (handy for CI/scripting)
 #
 # Override any of these via environment variables if your setup differs:
 #   REMOTE_HOST   (default: hunter@watering-can)
 #   REMOTE_PATH   (default: ~/watering-can)
+#   PROJECT_DIR   (default: src)        -- which project folder to build (src, pot, ...)
+#   TARGET        (default: esp32)      -- idf.py set-target value (esp32, esp32p4, ...)
 #   IDF_EXPORT    (default: $REMOTE_PATH/vendor/esp-idf-v5.5/export.sh --
 #                  ESP-IDF lives inside the synced repo on the Pi, so this
 #                  tracks REMOTE_PATH unless you override it directly)
-#   PORT          (default: /dev/ttyUSB0)
+#   PORT          (default: /dev/ttyACM0 for --pot/esp32p4, /dev/ttyUSB0 otherwise --
+#                  the esp32p4's native USB-Serial/JTAG shows up as ttyACM on
+#                  Linux, unlike the esp32 boards' CP2102/CH340 ttyUSB bridges)
+#
+# --pot/--src are just shorthand that set PROJECT_DIR/TARGET for you, and
+# take precedence over the env vars above if both are given for the same run.
+#
+# Note: the esp32p4 target (PROJECT_DIR=pot) needs its own toolchain
+# (riscv32-esp-elf). If the remote build fails with a missing-toolchain
+# error, run `install.sh esp32p4` there once (source the same export.sh
+# first), then re-run this script.
 
 set -euo pipefail
 
 REMOTE_HOST="${REMOTE_HOST:-hunter@watering-can}"
 REMOTE_PATH="${REMOTE_PATH:-~/watering-can}"
+PROJECT_DIR="${PROJECT_DIR:-src}"
+TARGET="${TARGET:-esp32}"
 IDF_EXPORT="${IDF_EXPORT:-$REMOTE_PATH/vendor/esp-idf-v5.5/export.sh}"
-PORT="${PORT:-/dev/ttyUSB0}"
+PORT="${PORT:-}"  # resolved below, after --pot/--src are parsed (default depends on target)
 
 DO_MONITOR=0
 DO_MENUCONFIG=0
@@ -34,10 +51,23 @@ while [ $# -gt 0 ]; do
         --monitor) DO_MONITOR=1 ;;
         --menuconfig) DO_MENUCONFIG=1 ;;
         --port) PORT="$2"; shift ;;
+        --pot) PROJECT_DIR="pot"; TARGET="esp32p4" ;;
+        --src) PROJECT_DIR="src"; TARGET="esp32" ;;
         *) echo "Unknown argument: $1" >&2; exit 1 ;;
     esac
     shift
 done
+
+# Default serial port depends on target: esp32p4's native USB-Serial/JTAG
+# (used over its OTG/firmware-download port) shows up as /dev/ttyACM0 on
+# Linux, while the esp32 boards' CP2102/CH340 USB-UART bridges show up as
+# /dev/ttyUSBx. Only applied if neither the PORT env var nor --port was given.
+if [ -z "$PORT" ]; then
+    case "$TARGET" in
+        esp32p4) PORT="/dev/ttyACM0" ;;
+        *) PORT="/dev/ttyUSB0" ;;
+    esac
+fi
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -48,10 +78,12 @@ rsync -avz --delete \
     --exclude='build/' \
     --exclude='src/sdkconfig' \
     --exclude='src/sdkconfig.old' \
+    --exclude='pot/sdkconfig' \
+    --exclude='pot/sdkconfig.old' \
     --exclude='samples/relay-demo/build/' \
     "$REPO_ROOT/" "$REMOTE_HOST:$REMOTE_PATH/"
 
-REMOTE_CMDS="set -euo pipefail; cd $REMOTE_PATH/src; source $IDF_EXPORT; idf.py set-target esp32"
+REMOTE_CMDS="set -euo pipefail; cd $REMOTE_PATH/$PROJECT_DIR; source $IDF_EXPORT; idf.py set-target $TARGET"
 if [ "$DO_MENUCONFIG" -eq 1 ]; then
     REMOTE_CMDS="$REMOTE_CMDS && idf.py menuconfig"
 fi
@@ -60,7 +92,7 @@ if [ "$DO_MONITOR" -eq 1 ]; then
     REMOTE_CMDS="$REMOTE_CMDS monitor"
 fi
 
-echo "==> Building and flashing on $REMOTE_HOST"
+echo "==> Building and flashing $PROJECT_DIR (target: $TARGET) on $REMOTE_HOST"
 if [ "$DO_MENUCONFIG" -eq 1 ] || [ "$DO_MONITOR" -eq 1 ]; then
     # menuconfig and monitor are interactive; need a real tty
     ssh -t "$REMOTE_HOST" "$REMOTE_CMDS"
