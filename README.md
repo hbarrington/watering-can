@@ -56,7 +56,7 @@ flowchart TB
 Building this iteratively since only a couple of dev boards are wired up at a time — each phase gets flashed and tested on real hardware before moving to the next.
 
 1. **Grow light scheduling** — `src/` has a first pass: 2 relays (configurable up to 4) driving 120V grow-light outlets on a daily on/off schedule (Kconfig-configurable hours/minutes), reusing the WiFi+SNTP time sync proven in the demo. **Status: validated on hardware.**
-2. **Tree sensor monitoring** — temperature, moisture, and acidity per calamansi tree, for up to 4 trees (configurable). Sensor hardware now picked (see Hardware below). `pot/`'s toolchain/flash/boot, Ethernet+PoE connectivity (DHCP-assigned IP over the RJ45/PoE port), and the capacitive soil moisture sensor (one-shot ADC, raw/mV logged) are all **validated on hardware**. DS18B20 (temp) and the DFRobot pH sensor aren't wired up yet — not purchased.
+2. **Tree sensor monitoring** — temperature, moisture, and acidity per calamansi tree, for up to 4 trees (configurable). Sensor hardware now picked (see Hardware below). `pot/`'s toolchain/flash/boot, Ethernet+PoE connectivity (DHCP-assigned IP over the RJ45/PoE port), and the capacitive soil moisture sensor (one-shot ADC, raw/mV logged) are all **validated on hardware**. DS18B20 (temp) is now owned (driver not yet written); the DFRobot pH sensor isn't purchased yet.
 3. **Automatic watering** — trigger a water pump relay when a tree's moisture reading is low.
 4. **Root warming** — trigger a relay for a 120V warming blanket when a tree's root-zone temperature is cold.
 5. **Remote schedule management** — a small web service (ESPAsyncWebServer is vendored as a candidate) to configure schedules/thresholds without a reflash.
@@ -98,7 +98,8 @@ Full itemized parts list with quantities, costs, and purchase links lives in [`h
 * DHT11 temperature/humidity sensor — owned (×1, ambient air near the light fixture)
 * Raspberry Pi ("watering-can") — used to flash/monitor the ESP32 over USB
 * 1× capacitive soil moisture sensor (v2.0.0) — owned, wired into `pot/` via ADC
-* Still needed to prototype phases 2–4: 1× DS18B20 waterproof probe, 1× soil pH sensor, 1× small water pump, 1× 120V warming blanket/heat mat
+* 1× DS18B20 waterproof probe (DROK) — owned, driver not yet written
+* Still needed to prototype phases 2–4: 1× soil pH sensor, 1× small water pump, 1× 120V warming blanket/heat mat
 
 ### Production BOM (4 trees + 1 light fixture)
 * 1× main ESP32 module (ceiling fixture)
