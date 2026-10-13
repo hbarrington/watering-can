@@ -53,7 +53,9 @@ menu "Watering Can Configuration"
         config WC_LIGHT_ON_HOUR
             int "Lights ON hour (0-23, local time)"
             range 0 23
-            default 6
+            default 4
+            help
+                4am-2pm is the current schedule for the calamansi trees.
 
         config WC_LIGHT_ON_MINUTE
             int "Lights ON minute"
@@ -63,7 +65,7 @@ menu "Watering Can Configuration"
         config WC_LIGHT_OFF_HOUR
             int "Lights OFF hour (0-23, local time)"
             range 0 23
-            default 22
+            default 14
 
         config WC_LIGHT_OFF_MINUTE
             int "Lights OFF minute"
