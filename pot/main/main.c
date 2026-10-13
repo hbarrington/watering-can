@@ -7,13 +7,12 @@
  * Phase 2 (done): Ethernet (internal EMAC + IP101 PHY over the RJ45/PoE
  * port) -- link up, DHCP-assigned IP, confirmed on hardware.
  *
- * Phase 3 (this build): first real sensor. Reading the capacitive soil
- * moisture sensor already on hand via one-shot ADC on
- * CONFIG_WC_POT_MOISTURE_ADC_GPIO (default GPIO19, one of the Hat2-Bus
- * header's ADC-capable pins). Deliberately NOT calibrated to a 0-100%
- * scale yet -- logging raw counts + millivolts so the sensor's actual
- * dry/wet range can be observed on real hardware first. DS18B20 (soil
- * temp) and the DFRobot pH sensor aren't wired up yet -- not purchased.
+ * Phase 3 (done): first real sensor. Capacitive soil moisture sensor
+ * on CONFIG_WC_POT_MOISTURE_ADC_GPIO (default GPIO19, Hat2-Bus header),
+ * calibrated to a 0-100% scale against raw readings measured on
+ * hardware in air (dry) and fully submerged in water (wet) -- see
+ * Kconfig.projbuild. DS18B20 (soil temp) and the DFRobot pH sensor
+ * aren't wired up yet -- pH not purchased yet.
  */
 #include <stdio.h>
 #include "esp_log.h"
@@ -43,7 +42,7 @@ void app_main(void)
     ESP_LOGI(TAG, "flash: %u MB", (unsigned)(flash_size / (1024 * 1024)));
     ESP_LOGI(TAG, "free heap: %u bytes", (unsigned)esp_get_free_heap_size());
     ESP_LOGI(TAG, "================================================");
-    ESP_LOGI(TAG, "goal of this build: moisture sensor readings (raw/mV) on the serial log.");
+    ESP_LOGI(TAG, "goal of this build: calibrated moisture %% readings on the serial log.");
     ESP_LOGI(TAG, "================================================");
 
     esp_err_t moisture_err = moisture_sensor_init();
@@ -61,12 +60,12 @@ void app_main(void)
     int count = 0;
     while (1) {
         if (moisture_err == ESP_OK) {
-            int raw = 0, mv = 0;
-            if (moisture_sensor_read(&raw, &mv) == ESP_OK) {
+            int raw = 0, mv = 0, percent = 0;
+            if (moisture_sensor_read(&raw, &mv, &percent) == ESP_OK) {
                 if (mv >= 0) {
-                    ESP_LOGI(TAG, "alive (%d) | moisture: raw=%d mv=%d", count, raw, mv);
+                    ESP_LOGI(TAG, "alive (%d) | moisture: raw=%d mv=%d (%d%%)", count, raw, mv, percent);
                 } else {
-                    ESP_LOGI(TAG, "alive (%d) | moisture: raw=%d (uncalibrated)", count, raw);
+                    ESP_LOGI(TAG, "alive (%d) | moisture: raw=%d (%d%%, uncalibrated mv)", count, raw, percent);
                 }
             } else {
                 ESP_LOGW(TAG, "alive (%d) | moisture read failed", count);

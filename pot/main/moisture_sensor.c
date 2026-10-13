@@ -9,16 +9,37 @@
 
 static const char *TAG = "moisture";
 
-// Covers the full 0-3.3V input range. The sensor's actual output swing
-// (dry vs. fully wet) isn't characterized yet -- that's the point of
-// this bring-up step.
+// Covers the full 0-3.3V input range.
 #define MOISTURE_ATTEN ADC_ATTEN_DB_12
+
+// Calibration bounds, measured on real hardware (see Kconfig.projbuild
+// for the readings these defaults came from). Raw counts, NOT mv --
+// clamping happens in raw-count space since that's what the sensor
+// actually reports; mv is a calibrated courtesy value for the log, not
+// what percent is computed from.
+#define MOISTURE_RAW_DRY CONFIG_WC_POT_MOISTURE_RAW_DRY
+#define MOISTURE_RAW_WET CONFIG_WC_POT_MOISTURE_RAW_WET
 
 static adc_oneshot_unit_handle_t s_adc_handle = NULL;
 static adc_cali_handle_t s_cali_handle = NULL;
 static adc_channel_t s_channel;
 static bool s_calibrated = false;
 static bool s_inited = false;
+
+// Maps a raw ADC reading to 0-100%, clamped at both ends. Higher raw
+// (drier) -> lower percent; lower raw (wetter) -> higher percent --
+// matches this sensor's actual behavior (capacitance rises, output
+// voltage falls, as moisture increases).
+static int raw_to_percent(int raw)
+{
+    if (raw >= MOISTURE_RAW_DRY) {
+        return 0;
+    }
+    if (raw <= MOISTURE_RAW_WET) {
+        return 100;
+    }
+    return (int)(((int64_t)(MOISTURE_RAW_DRY - raw) * 100) / (MOISTURE_RAW_DRY - MOISTURE_RAW_WET));
+}
 
 static bool calibration_init(adc_unit_t unit, adc_channel_t channel, adc_atten_t atten)
 {
@@ -82,7 +103,7 @@ esp_err_t moisture_sensor_init(void)
     return ESP_OK;
 }
 
-esp_err_t moisture_sensor_read(int *raw_out, int *mv_out)
+esp_err_t moisture_sensor_read(int *raw_out, int *mv_out, int *percent_out)
 {
     if (!s_inited) {
         return ESP_ERR_INVALID_STATE;
@@ -108,6 +129,10 @@ esp_err_t moisture_sensor_read(int *raw_out, int *mv_out)
         } else {
             *mv_out = -1;
         }
+    }
+
+    if (percent_out) {
+        *percent_out = raw_to_percent(raw);
     }
 
     return ESP_OK;

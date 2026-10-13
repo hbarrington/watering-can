@@ -7,12 +7,39 @@ menu "Watering Can Pot Module Configuration"
         help
             GPIO wired to the capacitive soil moisture sensor's analog
             output, via the Hat2-Bus header. Must be an ADC-capable pin --
-            on esp32p4, that's GPIO 16-23 (ADC1) or 49-54 (ADC2). GPIO
-            19-23 are confirmed present on the Hat2-Bus header's pin list
-            in hardware_bom.md (and happen to be exactly the ADC1-capable
-            range), but the physical header *position* for this GPIO is
-            not confirmed -- verify with a multimeter/continuity test
-            before trusting the silkscreen, same as earlier GPIO mixups
-            in this project.
+            on esp32p4, that's GPIO 16-23 (ADC1) or 49-54 (ADC2). GPIO19 on
+            the Hat2-Bus header is now confirmed correct on real hardware
+            (a first wiring attempt landed on GND/3.3V instead -- misread
+            silkscreen -- and was caught by a pegged, out-of-range reading;
+            after fixing the wiring, readings correctly track wet vs. dry).
+            Other Hat2-Bus pins earmarked for future sensors are still
+            unconfirmed -- verify with a multimeter/continuity test before
+            trusting the silkscreen for those.
+
+    config WC_POT_MOISTURE_RAW_DRY
+        int "ADC raw reading calibrated as 0% (driest)"
+        range 0 4095
+        default 2800
+        help
+            Raw ADC counts measured with the sensor in open air -- the
+            driest calibration point. Measured on hardware: ~2780-2834
+            across several seconds of readings. Air (rather than bone-dry
+            soil) is the standard "dry" calibration point for capacitive
+            moisture sensors -- the sensor can't distinguish "no medium"
+            from "bone-dry medium" since both have near-identical
+            dielectric properties. If a real dry-soil reading ever falls
+            outside the dry/wet range here, re-measure and adjust.
+
+    config WC_POT_MOISTURE_RAW_WET
+        int "ADC raw reading calibrated as 100% (wettest)"
+        range 0 4095
+        default 1478
+        help
+            Raw ADC counts measured with the sensor fully submerged in
+            water -- the wettest calibration point. Measured on hardware:
+            ~1461-1495 across several seconds of readings. For reference,
+            moist (but not submerged) potting soil measured ~2000-2024 on
+            this same sensor, landing comfortably between the two bounds
+            here.
 
 endmenu
