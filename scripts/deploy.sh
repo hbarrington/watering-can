@@ -103,7 +103,17 @@ fi
 if [ "$FLASH_ONLY" -eq 1 ]; then
     REMOTE_CMDS="$REMOTE_CMDS && idf.py -p $PORT flash"
 else
-    REMOTE_CMDS="$REMOTE_CMDS && idf.py build && idf.py -p $PORT flash"
+    # `idf.py build` is *supposed* to re-run config generation on its own
+    # whenever a Kconfig file changes (picking up new/changed CONFIG_*
+    # options into sdkconfig/sdkconfig.h), but that detection didn't fire
+    # reliably here in practice (likely rsync-preserved mtimes vs. the
+    # Pi's clock) -- it silently kept building against a stale sdkconfig.h
+    # missing a newly-added option, a confusing "undeclared identifier"
+    # compile error far from the actual cause. `idf.py reconfigure` forces
+    # that regeneration explicitly, every build; unlike `set-target` it
+    # does NOT fullclean or wipe existing sdkconfig settings, so it's
+    # cheap and safe to always run.
+    REMOTE_CMDS="$REMOTE_CMDS && idf.py reconfigure && idf.py build && idf.py -p $PORT flash"
 fi
 if [ "$DO_MONITOR" -eq 1 ]; then
     REMOTE_CMDS="$REMOTE_CMDS monitor"
