@@ -1,0 +1,18 @@
+menu "Watering Can Pot Module Configuration"
+
+    config WC_POT_MOISTURE_ADC_GPIO
+        int "Soil moisture sensor ADC GPIO"
+        range 0 54
+        default 19
+        help
+            GPIO wired to the capacitive soil moisture sensor's analog
+            output, via the Hat2-Bus header. Must be an ADC-capable pin --
+            on esp32p4, that's GPIO 16-23 (ADC1) or 49-54 (ADC2). GPIO
+            19-23 are confirmed present on the Hat2-Bus header's pin list
+            in hardware_bom.md (and happen to be exactly the ADC1-capable
+            range), but the physical header *position* for this GPIO is
+            not confirmed -- verify with a multimeter/continuity test
+            before trusting the silkscreen, same as earlier GPIO mixups
+            in this project.
+
+endmenu

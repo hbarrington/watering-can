@@ -56,14 +56,14 @@ flowchart TB
 Building this iteratively since only a couple of dev boards are wired up at a time — each phase gets flashed and tested on real hardware before moving to the next.
 
 1. **Grow light scheduling** — `src/` has a first pass: 2 relays (configurable up to 4) driving 120V grow-light outlets on a daily on/off schedule (Kconfig-configurable hours/minutes), reusing the WiFi+SNTP time sync proven in the demo. **Status: validated on hardware.**
-2. **Tree sensor monitoring** — temperature, moisture, and acidity per calamansi tree, for up to 4 trees (configurable). Sensor hardware now picked (see Hardware below). `pot/`'s toolchain/flash/boot and Ethernet+PoE connectivity (DHCP-assigned IP over the RJ45/PoE port) are both **validated on hardware**; sensor drivers not yet written.
+2. **Tree sensor monitoring** — temperature, moisture, and acidity per calamansi tree, for up to 4 trees (configurable). Sensor hardware now picked (see Hardware below). `pot/`'s toolchain/flash/boot, Ethernet+PoE connectivity (DHCP-assigned IP over the RJ45/PoE port), and the capacitive soil moisture sensor (one-shot ADC, raw/mV logged) are all **validated on hardware**. DS18B20 (temp) and the DFRobot pH sensor aren't wired up yet — not purchased.
 3. **Automatic watering** — trigger a water pump relay when a tree's moisture reading is low.
 4. **Root warming** — trigger a relay for a 120V warming blanket when a tree's root-zone temperature is cold.
 5. **Remote schedule management** — a small web service (ESPAsyncWebServer is vendored as a candidate) to configure schedules/thresholds without a reflash.
 
 ## TODOs
 * fully isolate ESP32 from relay/mains side (see [Learnings](#learnings))
-* verify the Unit PoE-P4's Hat2-Bus pin mapping in `hardware_bom.md` against the schematic before wiring sensors to it — the RMII/Ethernet pins are now confirmed working on hardware, but Hat2-Bus is still just sourced from M5Stack's docs page
+* verify the Unit PoE-P4's Hat2-Bus pin mapping in `hardware_bom.md` against the schematic — the RMII/Ethernet pins and the moisture sensor's GPIO19 are confirmed *electrically* working (link-up/DHCP, ADC readings), but the physical pin *positions* on the 16-pin Hat2-Bus header are still just sourced from M5Stack's docs page, not cross-checked against the schematic
 * validate one Unit PoE-P4 node end-to-end at the sensors stage before wiring up the other 3
 * pilot the recommended soil pH sensor on one tree before buying 4 more at ~$99 each (see `hardware_bom.md`)
 * add a voltage divider for the pH sensor's 0–4V output before wiring to the ESP32 ADC (max 3.3V input)
@@ -87,6 +87,7 @@ Building this iteratively since only a couple of dev boards are wired up at a ti
 * `pot/`'s esp32p4 build defaults to assuming 2MB flash unless `CONFIG_ESPTOOLPY_FLASHSIZE_16MB` is set, even though the board has 16MB — harmless for a small binary but worth setting correctly up front (now in `pot/sdkconfig.defaults`).
 * Ethernet on `pot/` worked first try using the esp32p4 EMAC pin defaults ESP-IDF itself ships (`ETH_ESP32_EMAC_DEFAULT_CONFIG()`) plus the generic example's default PHY address (1) — link up, DHCP-assigned IP, all confirmed on hardware. Nice case of two independent sources (M5Stack's docs + ESP-IDF's own defaults) agreeing before ever touching real hardware.
 * `idf.py set-target <target>` always runs a `fullclean` first (wiping `sdkconfig` and the whole build cache), even if the target isn't actually changing. `scripts/deploy.sh` now checks the existing `sdkconfig` and only calls `set-target` when the target actually differs — otherwise every single deploy was silently forcing a full rebuild, `--flash-only` included.
+* ESP-IDF's modern ADC API (`esp_adc` component, `adc_oneshot_*`) has an `adc_oneshot_io_to_channel(io_num, &unit, &channel)` helper that resolves a plain GPIO number to its ADC unit/channel — handy for making the sensor GPIO a Kconfig option (`WC_POT_MOISTURE_ADC_GPIO`) instead of hardcoding a channel enum. On esp32p4, ADC1 covers GPIO16–23 and ADC2 covers GPIO49–54 (`soc/adc_channel.h`); the Hat2-Bus header's GPIO19–23 all fall in ADC1's range, which is presumably not a coincidence.
 
 ## Hardware
 Full itemized parts list with quantities, costs, and purchase links lives in [`hardware_bom.md`](hardware_bom.md), kept up to date as decisions get made. Summary:
@@ -96,7 +97,8 @@ Full itemized parts list with quantities, costs, and purchase links lives in [`h
 * Breadboard power supply module — owned
 * DHT11 temperature/humidity sensor — owned (×1, ambient air near the light fixture)
 * Raspberry Pi ("watering-can") — used to flash/monitor the ESP32 over USB
-* Still needed to prototype phases 2–4: 1× DS18B20 waterproof probe, 1× capacitive soil moisture sensor, 1× soil pH sensor, 1× small water pump, 1× 120V warming blanket/heat mat
+* 1× capacitive soil moisture sensor (v2.0.0) — owned, wired into `pot/` via ADC
+* Still needed to prototype phases 2–4: 1× DS18B20 waterproof probe, 1× soil pH sensor, 1× small water pump, 1× 120V warming blanket/heat mat
 
 ### Production BOM (4 trees + 1 light fixture)
 * 1× main ESP32 module (ceiling fixture)
