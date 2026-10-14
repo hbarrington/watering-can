@@ -25,7 +25,7 @@ static void configure_timezone(void)
 
 void app_main(void)
 {
-    ESP_LOGI(TAG, "watering-can starting (phase 1: grow light scheduler)");
+    ESP_LOGI(TAG, "watering-can starting (phase 1.5: grow light scheduler)");
 
     configure_timezone();
 
@@ -74,7 +74,7 @@ void app_main(void)
         // change it at any time via PUT /schedule.
         daily_window_t light_window = light_state_get_window();
         bool schedule_on = light_schedule_is_on(&light_window, &timeinfo);
-        // Folds in any active manual override (POST /override), which
+        // Folds in any active manual override (POST /lights), which
         // auto-clears itself here once the schedule's own decision changes.
         bool should_be_on = light_state_resolve(schedule_on);
 

@@ -54,6 +54,15 @@
 # router's DHCP client list) if you don't already know it -- it's not
 # static unless you've set up a DHCP reservation.
 #
+# IMPORTANT: a USB flash (not --ota) is required after this script starts
+# stripping the stale CONFIG_PARTITION_TABLE_*/CONFIG_ESPTOOLPY_FLASHSIZE*
+# keys below -- that's what actually switches the board's on-chip
+# partition table to the two-OTA-slot layout for the first time; until
+# that USB flash happens, the chip still only has the old single-factory
+# table and `--ota` will fail with --fail reporting the HTTP error
+# (previously this failed silently -- see git history for the gory
+# details if curious).
+#
 # Note: the esp32p4 target (PROJECT_DIR=pot) needs its own toolchain
 # (riscv32-esp-elf). If the remote build fails with a missing-toolchain
 # error, run `install.sh esp32p4` there once (source the same export.sh
@@ -140,12 +149,40 @@ if [ "$FLASH_ONLY" -eq 0 ]; then
     # that regeneration explicitly, every build; unlike `set-target` it
     # does NOT fullclean or wipe existing sdkconfig settings, so it's
     # cheap and safe to always run.
+    #
+    # sdkconfig.defaults only fills in options sdkconfig doesn't already
+    # have a value for -- it never overrides one that's already explicitly
+    # set there, no matter how many times reconfigure/build re-run. The
+    # Pi's sdkconfig is excluded from the rsync above specifically so
+    # Pi-local state (WiFi credentials set via menuconfig, mainly) survives
+    # across deploys, but that same persistence meant the partition-table
+    # and flash-size switch below silently never took effect on the board:
+    # sdkconfig already had explicit (old) values for both from before
+    # those options existed in sdkconfig.defaults, so the new defaults were
+    # ignored and /ota kept failing with no obvious error in this script.
+    # These two option families are build infrastructure the repo should
+    # always control (unlike feature config people tune live via
+    # menuconfig/the web API), so strip any stale copies before every
+    # reconfigure and let them regenerate fresh from sdkconfig.defaults --
+    # everything else in sdkconfig (WiFi creds included) is untouched.
+    if [ -f sdkconfig ]; then
+        sed -i -E "/^CONFIG_(PARTITION_TABLE|ESPTOOLPY_FLASHSIZE)/d" sdkconfig
+    fi
     REMOTE_CMDS="$REMOTE_CMDS && idf.py reconfigure && idf.py build"
 fi
 if [ "$OTA_MODE" -eq 1 ]; then
-    # `ls build/*.bin` rather than hardcoding the project's binary name, so
-    # this doesn't need updating if that ever changes.
-    REMOTE_CMDS="$REMOTE_CMDS && BIN=\$(ls build/*.bin | head -1) && echo \"==> Pushing \$BIN to http://$OTA_HOST:$OTA_PORT/ota (device reboots into it on success)\" && curl -sS -X POST --data-binary @\"\$BIN\" \"http://$OTA_HOST:$OTA_PORT/ota\" && echo"
+    # Read the exact built binary name out of project_description.json
+    # (which ESP-IDF's own build system generates) rather than
+    # `ls build/*.bin | head -1` -- a two-OTA partition table also
+    # produces a top-level `build/ota_data_initial.bin`, which sorts
+    # alphabetically *before* this project's app binary and would have
+    # silently been the thing pushed over OTA instead of the real firmware.
+    # --fail makes curl (and so this script, under `set -e`) actually
+    # error out on a non-2xx response instead of treating "the HTTP
+    # request didn't error" as "the OTA succeeded" -- /ota returns 500
+    # with nothing flashed if the device's on-chip partition table doesn't
+    # actually have OTA slots yet, and that was failing silently before.
+    REMOTE_CMDS="$REMOTE_CMDS && BIN=\$(python3 -c 'import json; print(json.load(open(\"build/project_description.json\"))[\"app_bin\"])') && BIN=\"build/\$BIN\" && echo \"==> Pushing \$BIN to http://$OTA_HOST:$OTA_PORT/ota (device reboots into it on success)\" && curl -sS --fail -X POST --data-binary @\"\$BIN\" \"http://$OTA_HOST:$OTA_PORT/ota\" && echo"
 else
     REMOTE_CMDS="$REMOTE_CMDS && idf.py -p $PORT flash"
 fi

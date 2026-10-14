@@ -163,7 +163,7 @@ static esp_err_t schedule_put_handler(httpd_req_t *req)
     return send_json(req, schedule_to_json(&window));
 }
 
-static esp_err_t override_post_handler(httpd_req_t *req)
+static esp_err_t lights_post_handler(httpd_req_t *req)
 {
     char buf[JSON_BODY_MAX_LEN];
     if (read_body(req, buf, sizeof(buf)) != ESP_OK) {
@@ -303,7 +303,7 @@ esp_err_t web_api_start(void)
         { .uri = "/status", .method = HTTP_GET, .handler = status_get_handler },
         { .uri = "/schedule", .method = HTTP_GET, .handler = schedule_get_handler },
         { .uri = "/schedule", .method = HTTP_PUT, .handler = schedule_put_handler },
-        { .uri = "/override", .method = HTTP_POST, .handler = override_post_handler },
+        { .uri = "/lights", .method = HTTP_POST, .handler = lights_post_handler },
         { .uri = "/resume", .method = HTTP_POST, .handler = resume_post_handler },
         { .uri = "/temperature", .method = HTTP_GET, .handler = temperature_get_handler },
         { .uri = "/ota", .method = HTTP_POST, .handler = ota_post_handler },

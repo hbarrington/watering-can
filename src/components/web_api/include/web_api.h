@@ -7,7 +7,7 @@
 //   GET  /schedule      -- current ON/OFF window
 //   PUT  /schedule       -- update the window (any subset of on_hour/on_minute/off_hour/off_minute),
 //                          persists to NVS
-//   POST /override      -- {"on": true|false}; forces lights to that state until the
+//   POST /lights        -- {"on": true|false}; forces lights to that state until the
 //                          next scheduled transition, then auto-clears
 //   POST /resume         -- clears an active override immediately
 //   GET  /temperature    -- stub; DHT11 driver isn't wired up yet
