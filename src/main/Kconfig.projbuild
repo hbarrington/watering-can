@@ -74,4 +74,17 @@ menu "Watering Can Configuration"
 
     endmenu
 
+    menu "Web API"
+
+        config WC_HTTP_PORT
+            int "HTTP API port"
+            range 1 65535
+            default 80
+            help
+                Port for the status/schedule/override/ota web API (see
+                web_api component). No authentication -- same LAN-trust
+                model as the rest of this project.
+
+    endmenu
+
 endmenu

@@ -8,3 +8,20 @@ CONFIG_IDF_TARGET="esp32"
 CONFIG_EXAMPLE_CONNECT_WIFI=y
 CONFIG_EXAMPLE_WIFI_SSID="CHANGEME"
 CONFIG_EXAMPLE_WIFI_PASSWORD="CHANGEME"
+
+# OTA support: "Factory app, two OTA definitions" gives us factory + ota_0 +
+# ota_1 app slots (1MB each). The very first USB flash goes to "factory";
+# every /ota push after that round-robins between ota_0/ota_1
+# (esp_ota_get_next_update_partition() picks whichever one isn't currently
+# running). Switching partition tables wipes whatever's on the board, so
+# this requires one more USB reflash -- after that, OTA pushes work without
+# ever needing to open the box again.
+CONFIG_PARTITION_TABLE_TWO_OTA=y
+
+# This board's flash is actually 4MB (confirmed via the boot log's "Detected
+# size(4096k) larger than the size in the binary image header(2048k)"
+# warning on every prior flash) -- the default 2MB assumption is too small
+# to fit factory+ota_0+ota_1 (3MB+) at all, so this now needs to be set
+# explicitly rather than just leaving a cosmetic under-report like on pot/.
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
