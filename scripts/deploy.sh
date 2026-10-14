@@ -165,9 +165,16 @@ if [ "$FLASH_ONLY" -eq 0 ]; then
     # menuconfig/the web API), so strip any stale copies before every
     # reconfigure and let them regenerate fresh from sdkconfig.defaults --
     # everything else in sdkconfig (WiFi creds included) is untouched.
-    if [ -f sdkconfig ]; then
-        sed -i -E "/^CONFIG_(PARTITION_TABLE|ESPTOOLPY_FLASHSIZE)/d" sdkconfig
-    fi
+    #
+    # This has to run as part of REMOTE_CMDS (over ssh, against the Pi's
+    # sdkconfig) -- a bare `if [ -f sdkconfig ]; then sed ...; fi` right
+    # here would run locally, on whatever file (if any) happens to be
+    # named "sdkconfig" in the directory this script was invoked from,
+    # touching nothing on the actual device. (Yes, this shipped broken
+    # the first time -- the strip silently never ran and the stale keys
+    # lived on. Lesson: anything meant to affect the Pi's state has to be
+    # inside the REMOTE_CMDS string, not next to it.)
+    REMOTE_CMDS="$REMOTE_CMDS; if [ -f sdkconfig ]; then sed -i -E '/^CONFIG_(PARTITION_TABLE|ESPTOOLPY_FLASHSIZE)/d' sdkconfig; fi"
     REMOTE_CMDS="$REMOTE_CMDS && idf.py reconfigure && idf.py build"
 fi
 if [ "$OTA_MODE" -eq 1 ]; then
